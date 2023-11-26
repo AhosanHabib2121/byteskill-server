@@ -1,7 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const app = express()
-const {MongoClient,ServerApiVersion} = require('mongodb');
+const {MongoClient,ServerApiVersion, ObjectId} = require('mongodb');
 require('dotenv').config();
 const port = process.env.PORT || 5000
 
@@ -29,9 +29,15 @@ async function run() {
 
         // collection here
         const userCollection = client.db('byteskillDB').collection('users');
+        const teacherRequestCollection = client.db('byteskillDB').collection('teacherRequest');
 
 
-        // user collection here
+        //---------- user collection here--------
+        app.get('/api/user', async (req, res) => {
+            const result = await userCollection.find().toArray();
+            res.send(result);
+        })
+
         app.post('/api/user', async(req, res) => {
             const user = req.body;
             const query = {email: user.email};
@@ -46,7 +52,7 @@ async function run() {
             res.send(result)
         })
 
-        app.patch('/api/user', async (req, res) => {
+        app.patch('/api/user', async (req, res) => {    
             const user = req.body;
             const filter = {
                 email: user.email
@@ -59,6 +65,30 @@ async function run() {
             const result = await userCollection.updateOne(filter, updateData);
             res.send(result);
 
+        })
+
+        app.patch('/api/user/admin/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+
+        // ----------- teacherRequest collection here ----------
+        app.get('/api/teacher/request', async (req, res) => {
+            const result = await teacherRequestCollection.find().toArray();
+            res.send(result);
+        })
+        
+        app.post('/api/teacher/request', async (req, res) => {
+            const teacherData = req.body;
+            const result = await teacherRequestCollection.insertOne(teacherData);
+            res.send(result);
         })
 
 
