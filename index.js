@@ -1,5 +1,7 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const app = express()
 const {MongoClient,ServerApiVersion, ObjectId} = require('mongodb');
 require('dotenv').config();
@@ -7,8 +9,14 @@ const port = process.env.PORT || 5000
 
 
 // middleware
-app.use(cors());
+app.use(cors({
+    origin: [
+            'http://localhost:5173',
+        ],
+        credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.frkz6qo.mongodb.net/?retryWrites=true&w=majority`;
@@ -32,9 +40,60 @@ async function run() {
         const teacherRequestCollection = client.db('byteskillDB').collection('teacherRequest');
         const addClassCollection = client.db('byteskillDB').collection('addClass');
 
+        // --------------middleware--------
+        const verifyToken = async (req, res, next) => {
+            const token = req.cookies?.token;
+            if (!token) {
+                return res.status(401).send({
+                    message: 'Not authorized'
+                })
+            }
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
+                // error
+                if (err) {
+                    return res.status(401).send({
+                        message: 'Unauthorized'
+                    })
+                }
+
+                // if token is valid then it would be decode
+                console.log('decode',decode)
+                req.user = decode;
+                next();
+            })
+        }
+
+        // ----------JWT token api----------------
+         app.post('/jwt', async (req, res) => {
+             const user = req.body;
+             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                 expiresIn: '1h'
+             })
+             res.cookie('token', token, {
+                     httpOnly: true,
+                     secure: process.env.NODE_ENV === 'production',
+                     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                 })
+                 .send({
+                     success: true
+                 })
+         })
+        
+        // logout and clear cookies data
+        app.post('/logout', async (req, res) => {
+            const user = req.body;
+            res
+                .clearCookie('token', {
+                    maxAge: 0
+                })
+                .send({
+                    success: true
+                })
+        })
+
 
         //---------- user collection here--------
-        app.get('/api/user', async (req, res) => {
+        app.get('/api/user', verifyToken, async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         })
@@ -111,7 +170,7 @@ async function run() {
         })
 
         // ----------- teacherRequest collection here ----------
-        app.get('/api/teacher/request', async (req, res) => {
+        app.get('/api/teacher/request', verifyToken, async (req, res) => {
             const result = await teacherRequestCollection.find().toArray();
             res.send(result);
         })
