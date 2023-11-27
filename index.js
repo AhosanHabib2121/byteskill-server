@@ -30,6 +30,7 @@ async function run() {
         // collection here
         const userCollection = client.db('byteskillDB').collection('users');
         const teacherRequestCollection = client.db('byteskillDB').collection('teacherRequest');
+        const addClassCollection = client.db('byteskillDB').collection('addClass');
 
 
         //---------- user collection here--------
@@ -146,6 +147,12 @@ async function run() {
                 res.send(result);
             }
 
+        })
+        // --------------addClass Collection here---------------
+        app.post('/addClass', async (req, res) => {
+            const data = req.body;
+            const result = await addClassCollection.insertOne(data);
+            res.send(result);
         })
 
 
