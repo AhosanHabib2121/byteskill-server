@@ -106,6 +106,33 @@ async function run() {
             res.send(result);
         })
 
+        app.patch('/api/teacher/request/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)}
+            const requestData = await teacherRequestCollection.findOne(filter);
+            const updateStatus = {
+                $set: {
+                    status: 'accepted'
+                }
+            }
+            const statusUpdate = await teacherRequestCollection.updateOne(filter,updateStatus)
+
+            if (statusUpdate) {
+                const query = {
+                    email: requestData?.email
+                }
+                const user = await userCollection.findOne(query);
+                 const updatedRole = {
+                     $set: {
+                         role: 'teacher'
+                     }
+                 }
+                const result = await userCollection.updateOne(user, updatedRole);
+                res.send(result);
+            }
+
+        })
+
 
 
 
