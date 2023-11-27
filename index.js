@@ -53,6 +53,21 @@ async function run() {
             })
         })
 
+        app.get('/api/user/teacherAdmin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = {
+                email: email
+            };
+            const user = await userCollection.findOne(query);
+            let teacherAdmin = false;
+            if (user) {
+                teacherAdmin = user ?.role === 'teacher'
+            }
+            res.send({
+                teacherAdmin
+            })
+        })
+
         app.post('/api/user', async(req, res) => {
             const user = req.body;
             const query = {email: user.email};
