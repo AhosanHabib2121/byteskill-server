@@ -45,6 +45,7 @@ async function run() {
         // --------------middleware--------
         const verifyToken = (req, res, next) => {
             const token = req?.cookies?.token;
+
             if (!token) {
                 return res.status(401).send({
                     message: 'Unauthorized access'
@@ -203,7 +204,7 @@ async function run() {
             const result = await teacherRequestCollection.insertOne(teacherData);
             res.send(result);
         })
-
+        // teacher request approved here
         app.patch('/api/teacher/request/:id', async (req, res) => {
             const id = req.params.id;
             const filter = {_id: new ObjectId(id)}
@@ -226,8 +227,22 @@ async function run() {
                      }
                  }
                 const result = await userCollection.updateOne(user, updatedRole);
+
                 res.send(result);
             }
+
+        })
+        // teacher request reject here
+        app.patch('/api/teacher/request/reject/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)}
+            const updateStatus = {
+                $set: {
+                    status: 'rejected'
+                }
+            }
+            const result = await teacherRequestCollection.updateOne(filter, updateStatus);
+            res.send(result);
 
         })
         // --------------addClass Collection here---------------
