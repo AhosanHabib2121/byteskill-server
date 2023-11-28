@@ -11,9 +11,11 @@ const port = process.env.PORT || 5000
 // middleware
 app.use(cors({
     origin: [
-            'http://localhost:5173',
-        ],
-        credentials: true,
+        'http://localhost:5173',
+        // 'https://byteskill-ce962.web.app',
+        // 'https://byteskill-ce962.firebaseapp.com'
+    ],
+    credentials: true,
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -41,27 +43,25 @@ async function run() {
         const addClassCollection = client.db('byteskillDB').collection('addClass');
 
         // --------------middleware--------
-        const verifyToken = async (req, res, next) => {
-            const token = req.cookies?.token;
+        const verifyToken = (req, res, next) => {
+            const token = req?.cookies?.token;
             if (!token) {
                 return res.status(401).send({
-                    message: 'Not authorized'
+                    message: 'Unauthorized access'
                 })
             }
-            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
-                // error
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
                 if (err) {
                     return res.status(401).send({
-                        message: 'Unauthorized'
+                        message: 'Unauthorized access'
                     })
                 }
+                req.user = decoded;
+                next()
+            });
 
-                // if token is valid then it would be decode
-                console.log('decode',decode)
-                req.user = decode;
-                next();
-            })
         }
+
 
         // ----------JWT token api----------------
          app.post('/jwt', async (req, res) => {
@@ -98,12 +98,35 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/api/user/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await userCollection.findOne(query);
+            res.send(result);
+        })
+        app.put('/api/user/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            const numberData = req.body;
+            const filter = { email: email };
+            const options = {
+                upsert: true
+            };
+            const updateDoc = {
+                $set: {
+                    number: numberData?.number
+                },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })
+
         app.get('/api/user/admin/:email', async (req, res) => {
             const email = req.params.email;
             const query = {
                 email: email
             };
             const user = await userCollection.findOne(query);
+
             let admin = false;
             if (user) {
                 admin = user?.role === 'admin'
