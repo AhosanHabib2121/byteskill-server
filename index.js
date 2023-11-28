@@ -43,24 +43,34 @@ async function run() {
         const addClassCollection = client.db('byteskillDB').collection('addClass');
 
         // --------------middleware--------
+        // verifyToken
         const verifyToken = (req, res, next) => {
             const token = req?.cookies?.token;
+            
 
             if (!token) {
-                return res.status(401).send({
-                    message: 'Unauthorized access'
-                })
+                return res.status(401).send({message: 'Unauthorized access'})
             }
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
                 if (err) {
-                    return res.status(401).send({
-                        message: 'Unauthorized access'
-                    })
+                    return res.status(401).send({message: 'Unauthorized access'})
                 }
                 req.user = decoded;
-                next()
+                next();
             });
-
+        }
+        // verify admin token
+        const adminVerify = async (req, res, next) => {
+            const email = req?.user?.email;
+            const query = {
+                email: email
+            };
+            const user = await userCollection.findOne(query);
+            const isAdmin = user.role == 'admin';
+            if (!isAdmin) {
+                return res.status(403).send({message: 'forbidden access'})
+            }
+            next();
         }
 
 
@@ -94,7 +104,7 @@ async function run() {
 
 
         //---------- user collection here--------
-        app.get('/api/user', verifyToken, async (req, res) => {
+        app.get('/api/user', verifyToken, adminVerify, async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         })
@@ -105,7 +115,7 @@ async function run() {
             const result = await userCollection.findOne(query);
             res.send(result);
         })
-        app.put('/api/user/:email', verifyToken, async (req, res) => {
+        app.put('/api/user/:email', async (req, res) => {
             const email = req.params.email;
             const numberData = req.body;
             const filter = { email: email };
@@ -121,7 +131,7 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/api/user/admin/:email', async (req, res) => {
+        app.get('/api/user/admin/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
             const query = {
                 email: email
@@ -137,7 +147,7 @@ async function run() {
             })
         })
 
-        app.get('/api/user/teacherAdmin/:email', async (req, res) => {
+        app.get('/api/user/teacherAdmin/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
             const query = {
                 email: email
@@ -249,6 +259,27 @@ async function run() {
         app.get('/addClass', async (req, res) => {
             const result = await addClassCollection.find().toArray();
             res.send(result);
+        })
+
+        app.get('/addClass/approved', async (req, res) => {
+            const query ={status: 'approved'}
+            const result = await addClassCollection.find(query).toArray();
+            res.send(result);
+        })
+        // add class approved here
+        app.patch('/addClass/approved/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = {
+                _id: new ObjectId(id)
+            }
+            const updateStatus = {
+                $set: {
+                    status: 'approved'
+                }
+            }
+            const result = await addClassCollection.updateOne(filter, updateStatus);
+            res.send(result);
+
         })
 
         app.post('/addClass', async (req, res) => {
