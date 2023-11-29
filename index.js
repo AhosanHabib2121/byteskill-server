@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const app = express()
 const {MongoClient,ServerApiVersion, ObjectId} = require('mongodb');
 require('dotenv').config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000
 
 
@@ -261,6 +262,13 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/classesDetails/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await addClassCollection.findOne(query);
+            res.send(result);
+        })
+
         app.get('/addClass/approved', async (req, res) => {
             const query ={status: 'approved'}
             const result = await addClassCollection.find(query).toArray();
@@ -288,7 +296,20 @@ async function run() {
             res.send(result);
         })
 
+        // create-payment-intent
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
 
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ["card"],
+            })
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        })
 
 
 
