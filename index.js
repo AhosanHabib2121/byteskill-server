@@ -12,9 +12,8 @@ const port = process.env.PORT || 5000
 // middleware
 app.use(cors({
     origin: [
-        'http://localhost:5173',
-        // 'https://byteskill-ce962.web.app',
-        // 'https://byteskill-ce962.firebaseapp.com'
+        'https://byteskill-ce962.web.app',
+        'https://byteskill-ce962.firebaseapp.com'
     ],
     credentials: true,
 }));
