@@ -12,8 +12,9 @@ const port = process.env.PORT || 5000
 // middleware
 app.use(cors({
     origin: [
-        'https://byteskill-ce962.web.app',
-        'https://byteskill-ce962.firebaseapp.com'
+        'http://localhost:5173'
+        // 'https://byteskill-ce962.web.app',
+        // 'https://byteskill-ce962.firebaseapp.com'
     ],
     credentials: true,
 }));
@@ -208,6 +209,14 @@ async function run() {
             const result = await teacherRequestCollection.find().toArray();
             res.send(result);
         })
+
+        app.get('/api/teacherAll', async (req, res) => {
+            const query = {
+                status: 'accepted'
+            }
+            const teacherRequest = await teacherRequestCollection.find(query).toArray();
+            res.send(teacherRequest);
+        })
         
         app.post('/api/teacher/request', async (req, res) => {
             const teacherData = req.body;
@@ -219,14 +228,15 @@ async function run() {
             const id = req.params.id;
             const filter = {_id: new ObjectId(id)}
             const requestData = await teacherRequestCollection.findOne(filter);
+            
             const updateStatus = {
                 $set: {
                     status: 'accepted'
                 }
             }
-            const statusUpdate = await teacherRequestCollection.updateOne(filter,updateStatus)
+            const statusUpdate = await teacherRequestCollection.updateOne(filter, updateStatus)
 
-            if (statusUpdate) {
+            if (statusUpdate?.modifiedCount) {
                 const query = {
                     email: requestData?.email
                 }
